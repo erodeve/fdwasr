@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static  %}
+
+
+
+{% block head %}
+    <!-- mapbox -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css' rel='stylesheet' />
+
+    <!-- vuejs -->
+    <script src="https://unpkg.com/vue@3"></script>
+
+    <!-- turfJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    
+    <title>Location</title>    
+{% endblock head %}
+    
+
+
+
+{% block body %}
+
+
+<div class="row mb-3 p-3 m-0 d-flex align-items-center">
+    <div class="col-md-3 lh-sm"  id="locationApp">
+        <div class="card" style="width: 18rem;">
+            <div class="card-body">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="deliveryAreaSwitch" @click="showHidePolygon" v-bind:checked="isPolygonShowed">
+                    <label class="form-check-label" for="deliveryAreaSwitch">Show delivery area</label>
+                    <br>
+                    <small class="fw-lighter">
+                        It shows an area where the restaurant is able to make the delivery. 
+                    </small>
+                </div>
+                
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="addLocationSwitch" @click="addMarkerToMap" v-bind:checked="isMarkerAdded">
+                    <label class="form-check-label" for="addLocationSwitch">Add a location.</label>
+                    <br>
+                    <small class="fw-lighter">
+                        Drag the green marker to locate your position within the delivery area.
+                    </small>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <p> <i class="bi bi-geo-fill"></i> &nbsp; {{ location.address }}</p>
+                <p><i class="bi bi-telephone-fill"></i> &nbsp; {{ location.phone }}</p>
+            </div>
+
+
+        </div>
+    </div>
+
+    <div class="col-md-9 mt-3">
+        <div id="map" style="height: 60vh; width: 100%;"></div>
+    </div>
+
+</div>
+    
+
+
+<script>
+
+    mapboxgl.accessToken = "{{ mapbox_token }}"; 
+    const map = new mapboxgl.Map({
+        container: 'map', // container ID
+        style: 'mapbox://styles/mapbox/streets-v11', // style URL
+        center: ["{{ location.longitude }}", "{{ location.latitude }}"], // starting position [lng, lat]
+        zoom: "{{ location.zoom }}",  // starting zoom
+    });
+    map.addControl(new mapboxgl.NavigationControl({showZoom:true, showCompass:true}));
+
+    // restaurant location
+    const marker = new mapboxgl.Marker({color: 'red'})
+    .setLngLat(["{{ location.longitude }}", "{{ location.latitude }}"])
+    .addTo(map);
+
+
+    var deliveryArea = {
+        'type': 'geojson',
+        'data': JSON.parse("{{ polygon|escapejs }}"),
+    };
+    
+    var deliveryAreaFill = {
+        'id': 'fillarea',
+        'type': 'fill',
+        'source': 'deliveryArea', // reference the data source
+        'layout': {},
+        'paint': {
+            'fill-color': '#0080ff', // blue color fill
+            'fill-opacity': 0.5
+        }
+    };
+
+    var deliveryAreaOutline = {
+        'id': 'outline',
+        'type': 'line',
+        'source': 'deliveryArea',
+        'layout': {},
+        'paint': {
+            'line-color': '#000',
+            'line-width': 3
+        }
+    };
+
+    // adds the delivery area to the map
+    map.on('load', ()=> {
+        map.addSource('deliveryArea', deliveryArea);
+    });
+
+    // creates a marker inside the delivery area to drag
+    var point1 = turf.point(deliveryArea.data.geometry.coordinates[0][0]);
+    var point2 = turf.point(["{{ location.longitude }}", "{{ location.latitude }}"]);
+    var midPoint = turf.midpoint(point1,point2);
+    const secondMarker = new mapboxgl.Marker({
+        color: 'green',
+        draggable: true,
+    }).setLngLat(midPoint.geometry.coordinates);
+
+
+    const toolsApp = Vue.createApp({
+
+        delimiters: ['[[', ']]'],
+        
+        data() {
+            return {
+                isPolygonShowed: false,
+                isMarkerAdded: false,
+            }
+        },
+
+        methods: {
+            
+            showHidePolygon() {
+                if (this.isPolygonShowed) {
+                    map.removeLayer('outline'); 
+                    map.removeLayer('fillarea'); 
+                    this.isPolygonShowed = false; 
+                } else {
+                    map.addLayer(deliveryAreaFill);
+                    map.addLayer(deliveryAreaOutline);
+                    this.isPolygonShowed = true;
+                };
+            },
+
+            addMarkerToMap() {
+                this.isMarkerAdded = !this.isMarkerAdded;
+                if (this.isMarkerAdded) {
+                    secondMarker.addTo(map);
+                } else {
+                    secondMarker.remove();
+                };
+            }
+            
+        },
+
+    });
+    const toolsVueApp = toolsApp.mount('#locationApp');
+
+</script>
+
+
+{% endblock body %}
+    

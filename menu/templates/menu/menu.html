@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block head %}
+    <title>Menu</title>
+{% endblock head %}
+    
+
+
+{% block body %}
+    
+
+<main class="mb-4">
+    <div class="row m-0 mt-3">
+        <div class="col-sm-2"></div>
+        <div class="col-sm-8">
+            <div id="carouselExampleCaptions" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    
+                    {% for menu in menus %}                        
+                        <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="{{ forloop.counter0 }}" 
+                        class="{% if forloop.counter == 1 %}active{% endif %}" aria-current="true" aria-label="Slide {{ forloop.counter }}"></button>
+                    {% endfor %}
+                </div>
+                <div class="carousel-inner">
+                    
+                    {% for menu in menus %}
+                    <div class="carousel-item {% if forloop.counter == 1 %}active{% endif %}">
+                        <img src="{{ menu.image.url }}" class="d-block w-100" alt="no image">
+                        <div class="carousel-caption d-none d-md-block">
+                        <h5 class="text-dark">{{ menu.name }}</h5>
+                        </div>
+                    </div>                        
+                    {% endfor %}
+
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+
+
+        </div>
+        <div class="col-sm-2"></div>
+
+    </div>
+
+
+
+    <div class="container marketing mt-5">
+  
+        <!-- Three columns of text below the carousel -->
+        <div class="row">
+            {% for menu in menus %}
+                <div class="col-lg-4 my-2">
+                    <div class="row">
+                        <div class="col-6 col-md-12">
+                            <img class="w-100" src="{{ menu.image.url }}" alt="no image">
+                        </div>
+                        <div class="col-6 col-md-12 lh-1">
+                            <h6>{{ menu.name }}</h6>
+                            <small>{{ menu.description }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+    
+        </div><!-- /.row -->
+    </div>
+
+</main>
+{% endblock body %}
+    

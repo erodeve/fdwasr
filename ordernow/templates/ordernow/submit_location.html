@@ -1,0 +1,193 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+
+
+{% block head %}
+    
+    <!-- mapbox -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css' rel='stylesheet' />
+
+    <!-- vuejs -->
+    <script src="https://unpkg.com/vue@3"></script>
+
+    <!-- turfJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    
+{% endblock head %}
+    
+
+
+
+{% block body %}
+
+
+
+
+<main>
+    
+    <div class="container mb-5">
+        <div class="row my-3">
+            <div class="col-md-3"></div>
+            <div class="col-md-6">
+                <small class="text-secondary">
+                    Drag the blue marker to your exact location. There is no delivery service outside the sky-blue area.
+                </small>
+                <div id="map" style="width: 100%; height: 400px"></div>
+            </div>
+            <div class="col-md-3"></div>
+        </div>
+        <div class="row" id="locationAddressApp">
+            <h6 class="text-danger">[[ messageError ]]</h6>
+            <div class="col-md-3"></div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="addressInput" class="form-label">Address</label>
+                    <textarea v-model="address" class="form-control" id="addressInput" rows="3" required></textarea>
+                    <small class="text-secondary">
+                        Describe in detail your location, door number, color, apartment, etc.
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <label for="nameInput" class="form-label">Name & Last name</label>
+                    <input v-model="name" type="text" class="form-control" id="nameInput" required>
+                </div>
+                <div class="mb-3">
+                    <label for="cellphoneInput" class="form-label">Celphone/Telephone number</label>
+                    <input v-model="telephone" type="number" class="form-control" id="cellphoneInput" required>
+                </div>
+                <button v-on:click="submitForm" class="btn btn-primary">Submit</button>
+            </div>
+
+            <div class="col-md-3"></div>
+        </div>
+    </div>
+
+
+</main>
+
+
+<!-- axiosjs -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<script>
+
+    const locationAddressApp = Vue.createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                lat: 0.0,
+                lng: 0.0, 
+                address: '',
+                name: '',
+                telephone: '',
+                isFormComplete: false,
+                messageError: '',
+            }
+        }, 
+        methods: {
+            setCoords(lng,lat) {
+                this.lat = lat; 
+                this.lng = lng;
+            }, 
+            submitForm() {
+                if (this.lng != 0 && this.lat != 0 && this.address != '' && this.name != '' && this.telephone != '') {
+                    let data = new FormData();
+                    data.append('lat', this.lat);
+                    data.append('lng', this.lng);
+                    data.append('address', this.address);
+                    data.append('name', this.name);
+                    data.append('telephone', this.telephone);
+                    data.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    let url = "{% url 'submit_location' %}";
+                    axios.post(url, data).then(res => {
+                        if (res.data.status) {
+                            window.location.assign("{% url 'checkout' %}");
+                        };
+                    });
+              
+                    this.messageError = '';
+                } else {
+                    this.messageError = 'Please provide your location and complete the form. The blue marker has to be inside the sky-blue area';
+                };
+            }
+        }
+    });
+    const locationAddressVueApp = locationAddressApp.mount('#locationAddressApp');
+
+    mapboxgl.accessToken = "{{ mapbox_token }}";
+    const map = new mapboxgl.Map({
+        container: 'map', // container ID
+        style: 'mapbox://styles/mapbox/streets-v11', // style URL
+        center: ["{{ location.longitude }}", "{{ location.latitude }}"], // starting position [lng, lat]
+        zoom: "{{ location.zoom }}",  // starting zoom
+    });
+    map.addControl(new mapboxgl.NavigationControl({showZoom:true, showCompass:true}));
+
+
+    var deliveryArea =  {
+        'type': 'geojson',
+        'data': JSON.parse("{{ polygon|escapejs }}"),
+    };
+
+    var deliveryAreaFill = {
+        'id': 'fillarea',
+        'type': 'fill',
+        'source': 'deliveryArea', // reference the data source
+        'layout': {},
+        'paint': {
+            'fill-color': '#0080ff', // blue color fill
+            'fill-opacity': 0.5
+        }
+    };
+
+    var deliveryAreaOutline = {
+        'id': 'outline',
+        'type': 'line',
+        'source': 'deliveryArea',
+        'layout': {},
+        'paint': {
+            'line-color': '#000',
+            'line-width': 3
+        }
+    };
+
+    // adds the delivery area to the map
+    map.on('load', ()=> {
+        map.addSource('deliveryArea', deliveryArea);
+        map.addLayer(deliveryAreaFill); 
+        map.addLayer(deliveryAreaOutline);
+
+    });
+
+    const polycorner = deliveryArea.data.geometry.coordinates[0][0];
+    const markerCoords = turf.destination(polycorner, 0.5, -45);
+
+    // your location
+    const marker = new mapboxgl.Marker({
+        color: 'blue', 
+        draggable: true,
+    // }).setLngLat([7.500430, 9.097843]).addTo(map);
+    }).setLngLat(markerCoords.geometry.coordinates).addTo(map);
+
+    marker.on('dragend', () => {
+        var thecoords = marker.getLngLat();
+        var polyg = turf.polygon(deliveryArea.data.geometry.coordinates);
+        var point = turf.point([thecoords.lng, thecoords.lat]);
+        var isPointInside = turf.booleanContains(polyg, point);
+        if (isPointInside) {
+            locationAddressVueApp.setCoords(thecoords.lng, thecoords.lat)        
+
+        };
+
+    })
+
+
+</script>
+{% endblock body %}
+    
+
+

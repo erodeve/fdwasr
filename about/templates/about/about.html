@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block head %}
+    <title>About</title>
+{% endblock %}
+
+
+
+{% block body %}
+    
+
+<div class="container col-xl-10 col-xxl-8 px-4 pb-5">
+    <div class="row align-items-center g-lg-5 py-5">
+        <div class="col-md-6 text-center text-lg-start">
+            <h1 class="display-4 fw-bold lh-1 mb-3">{{ about.title }}</h1>
+            <p class="col-lg-10 fs-4">
+                {{ about.content }}   
+            </p>
+        </div>
+        <div class="col-md-6 mx-auto ">
+            <img src="{{ about.image.url }}" alt="no image" class="img-fluid">
+        </div>
+    </div>
+</div>
+
+{% endblock body %}
+    

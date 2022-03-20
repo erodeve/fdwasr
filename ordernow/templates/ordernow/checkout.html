@@ -1,0 +1,124 @@
+
+{% extends 'base.html' %}
+    
+{% load static %}
+
+
+
+{% block head %}
+    <!-- vuejs -->
+    <script src="https://unpkg.com/vue@3"></script>
+
+    <title>Checkout</title>
+
+{% endblock head %}
+    
+
+
+{% block body %}
+
+    <!-- axiosjs -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <div class="row m-5 ">
+        <div class="col-6">
+
+            <div class="card" style="width: 18rem;" id="orderdetailsapp">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Menu</th>
+                            <th scope="col">Quantity</th>
+                            <th scope="col">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in orderDetails">
+                            <td v-if="item.quantity > 0">[[ item.name ]]</td>
+                            <td v-if="item.quantity > 0">[[ item.quantity ]]</td>
+                            <td v-if="item.quantity > 0">[[ item.quantity*item.price ]]</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td>TOTAL</td>
+                            <td></td>
+                            <td>{{ total_cost }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-6">
+            <!-- paypal button -->
+            <div id="smart-button-container">
+                <div style="text-align: center;">
+                    <div id="paypal-button-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- vue app -->
+    <script>
+        const orderdetailsapp = Vue.createApp({
+            delimiters: ["[[", "]]"],
+            data() {
+                return {
+                    'orderDetails': JSON.parse("{{ order_details|escapejs }}"),
+                }
+            },
+            methods: {
+
+            }
+        }).mount('#orderdetailsapp');
+    </script>
+
+    <script src="https://www.paypal.com/sdk/js?client-id=<YOUR_CLIENT_ID>&currency=USD"></script>
+
+    <script>
+      function initPayPalButton() {
+        paypal.Buttons({
+            style: {
+                shape: 'rect',
+                color: 'gold',
+                layout: 'vertical',
+                label: 'paypal',
+                
+            },
+
+            createOrder: function(data, actions) {
+                return actions.order.create({
+                purchase_units: [{"description":"{{ oder_details }}","amount":{"currency_code":"USD","value": "{{ total_cost }}"}}]
+                });
+            },
+
+            onApprove: function(data, actions) {
+                return actions.order.capture().then(function(orderData) {
+                
+                // Full available details
+                console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));
+
+                // Show a success message within this page, e.g.
+                const element = document.getElementById('paypal-button-container');
+                element.innerHTML = '';
+                element.innerHTML = '<h3>Thank you for your payment!</h3>';
+
+                // Or go to another URL:  actions.redirect('thank_you.html');
+                window.location.assign("{% url 'order_created' %}");
+
+                });
+            },
+
+            onError: function(err) {
+                console.log(err);
+            }
+        }).render('#paypal-button-container');
+    }
+    initPayPalButton();
+
+    </script>
+
+
+
+{% endblock body %}
+    
+
