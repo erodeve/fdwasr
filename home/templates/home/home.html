@@ -121,13 +121,11 @@
 <script>
     
     mapboxgl.accessToken = "{{ mapbox_token }}";
-    const mapBounds = [[7.481761825258275, 9.085130136584482], [7.519098174745864, 9.110555411730573]];
     const map = new mapboxgl.Map({
         container: 'map', // container ID
         style: 'mapbox://styles/mapbox/streets-v11', // style URL
         center: ["{{ location.longitude }}", "{{ location.latitude }}"], // starting position [lng, lat]
         zoom: "{{ location.zoom }}",  // starting zoom
-        maxBounds: mapBounds,
     });
     map.addControl(new mapboxgl.NavigationControl({showZoom:true, showCompass:false}));
 
